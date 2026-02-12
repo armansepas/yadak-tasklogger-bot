@@ -1,0 +1,131 @@
+/**
+ * Daily Report Handler
+ * Handles Daily Report button - queries Azure DevOps and sends report to user's private chat
+ */
+
+import { Context } from "grammy";
+import { bot } from "../../index";
+import { findUserByTelegramId } from "../../../db/queries";
+import { getDailyWorkItems } from "../../../services/azure-devops";
+import { formatPersianDate } from "../../../utils/date";
+import { decryptToken } from "../../../utils/crypto";
+
+/**
+ * Handle Daily Report action - sends report to user's private chat
+ */
+export async function handleDailyReport(ctx: Context): Promise<void> {
+  const userId = ctx.from?.id.toString();
+
+  if (!userId) {
+    await ctx.reply("❌ خطا در پردازش درخواست");
+    return;
+  }
+
+  // Get user from database
+  const user = await findUserByTelegramId(userId);
+
+  if (!user) {
+    await ctx.editMessageText(
+      "❌ <b>کاربر یافت نشد.</b>\n\nابتدا در یک گروه مجاز /start را بزنید.",
+      { parse_mode: "HTML", reply_markup: undefined },
+    );
+    return;
+  }
+
+  // Check if user has PAT token
+  if (!user.patToken) {
+    await ctx.editMessageText(
+      "⚠️ <b>توکن Azure DevOps تنظیم نشده است.</b>\n\n" +
+        "لطفاً ابتدا توکن خود را تنظیم کنید.\n" +
+        "برای تنظیم توکن، روی دکمه «تنظیم توکن» کلیک کنید.",
+      {
+        parse_mode: "HTML",
+        reply_markup: undefined,
+      },
+    );
+    return;
+  }
+
+  // Decrypt the token
+  const decryptedToken = decryptToken(user.patToken);
+
+  try {
+    // Show loading message in group
+    await ctx.editMessageText("⏳ در حال دریافت گزارش...", {
+      reply_markup: undefined,
+    });
+
+    // Fetch daily work items
+    const workItems = await getDailyWorkItems(decryptedToken);
+
+    // Format the response with Persian date header
+    const today = formatPersianDate();
+    let message = `📊 <b>گزارش روزانه</b>\n\n📅 تاریخ: ${today}\n\n`;
+
+    if (workItems.length === 0) {
+      message += "📭 وظیفه‌ای برای امروز یافت نشد.";
+    } else {
+      message += `📋 <b>${workItems.length} وظیفه:</b>\n\n`;
+
+      for (const item of workItems) {
+        // Work items from batch API have fields nested inside 'fields' property
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fields =
+          ((item as any).fields as Record<string, unknown>) || item;
+        const id = item.id;
+        const title = fields["System.Title"] as string;
+        const state = fields["System.State"] as string;
+        const workItemType = fields["System.WorkItemType"] as string;
+        const originalEstimate = fields[
+          "Microsoft.VSTS.Scheduling.OriginalEstimate"
+        ] as number | undefined;
+        const completedWork = fields[
+          "Microsoft.VSTS.Scheduling.CompletedWork"
+        ] as number | undefined;
+
+        // State emoji based on work item state
+        const stateEmoji =
+          state === "Done" || state === "Closed"
+            ? "✅"
+            : state === "In Progress" || state === "Active"
+              ? "🔄"
+              : state === "To Do"
+                ? "⬜"
+                : "⏳";
+
+        // Work item type emoji
+        const typeEmoji = workItemType === "User Story" ? "📖" : "📝";
+
+        // Format work hours
+        let hoursText = "";
+        if (originalEstimate !== undefined || completedWork !== undefined) {
+          const estimate = originalEstimate ?? 0;
+          const completed = completedWork ?? 0;
+          hoursText = ` (${completed}/${estimate}h)`;
+        }
+
+        message += `${stateEmoji} ${typeEmoji} <a href="https://vcontrol.sepasholding.com/Yadakdotcom/_workitems/edit/${id}">#${id}</a> ${title}${hoursText}\n`;
+        message += `   📌 ${state} | ${workItemType}\n\n`;
+      }
+    }
+
+    // Send report to user's private chat
+    const privateChatId = ctx.from!.id;
+    await bot.api.sendMessage(privateChatId, message, {
+      parse_mode: "HTML",
+    });
+
+    // Update the group message to indicate report was sent
+    await ctx.editMessageText(
+      "✅ <b>گزارش روزانه به پیام خصوصی شما ارسال شد.</b>",
+      { parse_mode: "HTML", reply_markup: undefined },
+    );
+  } catch (error) {
+    console.error("Azure DevOps error:", error);
+    await ctx.editMessageText(
+      "❌ <b>خطا در دریافت گزارش</b>\n\n" +
+        "لطفاً توکن خود را بررسی کنید یا دوباره تلاش کنید.",
+      { parse_mode: "HTML", reply_markup: undefined },
+    );
+  }
+}

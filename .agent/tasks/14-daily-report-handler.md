@@ -29,9 +29,9 @@ Implement Daily Report button handler that queries Azure DevOps and sends format
 
 ## Checklist
 
-- [ ] Daily Report button working
-- [ ] PAT token check implemented
-- [ ] Prompt for token if not set
-- [ ] Azure DevOps query working
-- [ ] Persian date formatting in report
-- [ ] Report sent to private chat
+- [x] Daily Report button working
+- [x] PAT token check implemented
+- [x] Prompt for token if not set
+- [x] Azure DevOps query working
+- [x] Persian date formatting in report
+- [x] Report sent to private chat

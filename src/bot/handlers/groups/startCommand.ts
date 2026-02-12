@@ -29,6 +29,7 @@ import {
   formatPersianWeekday,
 } from "../../../utils/date";
 import { startPatTokenFlow } from "../user/setPatTokenHandler";
+import { handleDailyReport as processDailyReport } from "../reports/dailyReportHandler";
 
 /**
  * Setup group command handlers
@@ -100,7 +101,7 @@ async function handleCallbackQuery(ctx: Context): Promise<void> {
       await handleFinishWork(ctx);
       break;
     case CallbackData.DAILY_REPORT:
-      await handleDailyReport(ctx);
+      await processDailyReport(ctx);
       break;
     case CallbackData.SET_PAT_TOKEN:
       await handleSetPatToken(ctx);
@@ -233,83 +234,6 @@ async function handleLocationSelection(
 }
 
 /**
- * Handle Daily Report action
- */
-async function handleDailyReport(ctx: Context): Promise<void> {
-  const userId = ctx.from?.id.toString();
-
-  if (!userId) {
-    await ctx.reply("❌ خطا در پردازش درخواست");
-    return;
-  }
-
-  // Get user from database
-  const user = await findUserByTelegramId(userId);
-
-  if (!user) {
-    await ctx.reply("❌ کاربر یافت نشد");
-    return;
-  }
-
-  // Check if user has PAT token
-  if (!user.patToken) {
-    await ctx.editMessageText(
-      "⚠️ <b>توکن Azure DevOps تنظیم نشده است.</b>\n\nلطفاً ابتدا توکن خود را تنظیم کنید.",
-      {
-        parse_mode: "HTML",
-        reply_markup: undefined,
-      },
-    );
-    return;
-  }
-
-  // Decrypt the token
-  const { decryptToken } = await import("../../../utils/crypto");
-  const decryptedToken = decryptToken(user.patToken);
-
-  // Get Azure DevOps service
-  const { getDailyWorkItems } = await import("../../../services/azure-devops");
-
-  try {
-    // Fetch daily work items
-    const workItems = await getDailyWorkItems(decryptedToken);
-
-    // Format the response
-    const today = formatPersianDate();
-    let message = `📊 <b>گزارش روزانه</b>\n\n📅 تاریخ: ${today}\n\n`;
-
-    if (workItems.length === 0) {
-      message += "📭 وظیفه‌ای برای امروز یافت نشد.";
-    } else {
-      message += `📋 <b>${workItems.length} وظیفه:</b>\n\n`;
-
-      for (const item of workItems) {
-        const title = item["System.Title"] as string;
-        const state = item["System.State"] as string;
-        const id = item["id"];
-
-        // State emoji
-        const stateEmoji =
-          state === "Done" ? "✅" : state === "In Progress" ? "⏳" : "⬜";
-
-        message += `${stateEmoji} <a href="https://dev.azure.com/Yadakdotcom/Yadak.com/_workitems/edit/${id}">#${id}</a> ${title}\n`;
-      }
-    }
-
-    await ctx.editMessageText(message, {
-      parse_mode: "HTML",
-      reply_markup: undefined,
-    });
-  } catch (error) {
-    console.error("Azure DevOps error:", error);
-    await ctx.editMessageText(
-      "❌ <b>خطا در دریافت گزارش</b>\n\nلطفاً توکن خود را بررسی کنید.",
-      { parse_mode: "HTML", reply_markup: undefined },
-    );
-  }
-}
-
-/**
  * Handle Set PAT Token action - starts the token input flow in private chat
  */
 async function handleSetPatToken(ctx: Context): Promise<void> {
@@ -353,7 +277,7 @@ async function handleFinishWorkText(ctx: Context): Promise<void> {
 }
 
 async function handleDailyReportText(ctx: Context): Promise<void> {
-  await handleDailyReport(ctx);
+  await processDailyReport(ctx);
 }
 
 async function handleSetPatTokenText(ctx: Context): Promise<void> {

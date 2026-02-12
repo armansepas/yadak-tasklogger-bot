@@ -104,7 +104,18 @@ export async function getDailyWorkItems(
 
   const workItems = await runWiqlQuery(patToken, query);
   const ids = workItems.map((item) => item.id);
-  return fetchWorkItemsByIds(patToken, ids);
+
+  // Fetch with fields needed for daily report
+  return fetchWorkItemsByIds(patToken, ids, [
+    "System.Id",
+    "System.Title",
+    "System.State",
+    "System.WorkItemType",
+    "System.AssignedTo",
+    "System.ChangedDate",
+    "Microsoft.VSTS.Scheduling.OriginalEstimate",
+    "Microsoft.VSTS.Scheduling.CompletedWork",
+  ]);
 }
 
 /**
