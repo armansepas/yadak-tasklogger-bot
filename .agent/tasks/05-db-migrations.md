@@ -23,6 +23,6 @@ Run database migrations to create all tables in SQLite.
 
 ## Checklist
 
-- [ ] Tables created in database
-- [ ] Database file in place
-- [ ] Migration repeatable
+- [x] Tables created in database
+- [x] Database file in place
+- [x] Migration repeatable
