@@ -5,8 +5,16 @@
 
 import { Context, NextFunction } from "grammy";
 import { bot, BOT_ADMIN_TELEGRAM_ID } from "./index";
-import { findGroupByTelegramId, createGroup } from "../db/queries/group";
-import { findUserByTelegramId, createUser } from "../db/queries/user";
+import {
+  findGroupByTelegramId,
+  createGroup,
+  updateGroupByTelegramId,
+} from "../db/queries/group";
+import {
+  findUserByTelegramId,
+  createUser,
+  updateUserByTelegramId,
+} from "../db/queries/user";
 import { StatusEnum } from "../db/schema";
 
 /**
@@ -197,7 +205,7 @@ async function triggerGroupDiscovery(
       `🆔 <b>User ID:</b> <code>${userId}</code>`;
 
     // Send approval message to admin with inline keyboard
-    await bot.api.sendMessage(adminId, message, {
+    const sentMessage = await bot.api.sendMessage(adminId, message, {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
@@ -207,6 +215,12 @@ async function triggerGroupDiscovery(
           ],
         ],
       },
+    });
+
+    // Update group with admin message reference
+    await updateGroupByTelegramId(chatId, {
+      adminMessageId: sentMessage.message_id,
+      adminChatId: adminId,
     });
 
     console.log(
@@ -250,7 +264,7 @@ async function triggerUserDiscovery(
       `👤 <b>User:</b> ${userName}${username ? ` (@${username})` : ""}\n` +
       `🆔 <b>User ID:</b> <code>${userId}</code>`;
 
-    await bot.api.sendMessage(adminId, message, {
+    const sentMessage = await bot.api.sendMessage(adminId, message, {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
@@ -260,6 +274,12 @@ async function triggerUserDiscovery(
           ],
         ],
       },
+    });
+
+    // Update user with admin message reference
+    await updateUserByTelegramId(userId, {
+      adminMessageId: sentMessage.message_id,
+      adminChatId: adminId,
     });
 
     console.log(

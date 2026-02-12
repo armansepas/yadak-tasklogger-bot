@@ -29,8 +29,8 @@ Implement automatic group and user discovery when bot receives first message fro
 
 ## Checklist
 
-- [ ] New groups created with pending status
-- [ ] New users created with pending status
-- [ ] Super admin notified
-- [ ] Approval buttons working
-- [ ] Admin message reference stored
+- [x] New groups created with pending status
+- [x] New users created with pending status
+- [x] Super admin notified
+- [x] Approval buttons working
+- [x] Admin message reference stored

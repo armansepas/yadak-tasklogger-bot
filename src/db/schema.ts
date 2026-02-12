@@ -45,6 +45,8 @@ export const managedGroup = sqliteTable("managed_group", {
   })
     .notNull()
     .default(StatusEnum.PENDING),
+  adminMessageId: integer("admin_message_id"),
+  adminChatId: text("admin_chat_id"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -65,6 +67,8 @@ export const managedUser = sqliteTable("managed_user", {
     .notNull()
     .default(StatusEnum.PENDING),
   patToken: text("pat_token"),
+  adminMessageId: integer("admin_message_id"),
+  adminChatId: text("admin_chat_id"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
