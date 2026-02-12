@@ -24,7 +24,7 @@ Initialize the grammY bot instance with token and optional proxy support.
 
 ## Checklist
 
-- [ ] Bot instance created
-- [ ] Proxy configured (if needed)
-- [ ] Error handling in place
-- [ ] Bot exported for use
+- [x] Bot instance created
+- [x] Proxy configured (if needed)
+- [x] Error handling in place
+- [x] Bot exported for use
