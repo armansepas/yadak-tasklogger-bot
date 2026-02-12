@@ -112,8 +112,9 @@ BOT_ADMIN_TELEGRAM_ID=<telegram id of super admin>
 
 # Proxy Configuration (optional)
 
-PROXY_URL="https://subdomain.username.workers.dev/bot{bot_token}"
-which is a proxy url for cloudflare workers.
+# Cloudflare Workers proxy URL - DON'T include bot token, grammY adds it automatically
+
+PROXY_URL="https://subdomain.username.workers.dev"
 
 ---
 

@@ -27,8 +27,8 @@ Create the main entry point that starts the bot and scheduler.
 
 ## Checklist
 
-- [ ] Entry point created
-- [ ] Bot starts polling
-- [ ] Scheduler starts running
-- [ ] Graceful shutdown handling
-- [ ] No HTTP server used
+- [x] Entry point created
+- [x] Bot starts polling
+- [ ] Scheduler starts running (not implemented yet)
+- [x] Graceful shutdown handling
+- [x] No HTTP server used

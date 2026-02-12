@@ -29,24 +29,24 @@ if (!BOT_ADMIN_TELEGRAM_ID) {
   throw new Error("BOT_ADMIN_TELEGRAM_ID environment variable is required");
 }
 
+const apiRoot = PROXY_URL ? PROXY_URL : "https://api.telegram.org/bot";
+
 // Create bot instance
-const bot = new Bot(BOT_TOKEN);
+const bot = new Bot(BOT_TOKEN, {
+  client: {
+    apiRoot,
+  },
+});
 
-// Configure proxy if provided
-if (PROXY_URL) {
-  // Replace {bot_token} placeholder with actual token
-  const proxyUrl = PROXY_URL.replace("{bot_token}", BOT_TOKEN);
-
-  // Configure the API to use proxy
-  bot.api.config.use(async (prev, method, payload) => {
-    // @ts-ignore -grammy internal types
-    return prev(method, payload);
-  });
-
-  // Set default export for API
-  // @ts-ignore -grammy internal
-  bot.api.config.proxyUrl = proxyUrl;
-}
+// Configure proxy if provided - grammY uses apiRoot to change the API endpoint
+// console.log("🚀 ~ PROXY_URL:", PROXY_URL);
+// if (PROXY_URL) {
+//   // Replace {bot_token} placeholder with actual token
+//   const proxyUrl = PROXY_URL.replace("{bot_token}", BOT_TOKEN);
+//   console.log("🚀 ~ proxyUrl:", proxyUrl);
+//   // @ts-ignore - grammY internal property
+//   bot.api.apiRoot = proxyUrl;
+// }
 
 // Setup handlers
 setupDiscoveryHandlers();
