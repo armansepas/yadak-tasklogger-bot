@@ -9,6 +9,7 @@ import { findUserByTelegramId } from "../../../db/queries";
 import { getDailyWorkItems } from "../../../services/azure-devops";
 import { formatPersianDate } from "../../../utils/date";
 import { decryptToken } from "../../../utils/crypto";
+import { MessageType, trackMessage } from "../../../services/messageService";
 
 /**
  * Handle Daily Report action - sends report to user's private chat
@@ -34,15 +35,25 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
 
   // Check if user has PAT token
   if (!user.patToken) {
-    await ctx.editMessageText(
-      "⚠️ <b>توکن Azure DevOps تنظیم نشده است.</b>\n\n" +
-        "لطفاً ابتدا توکن خود را تنظیم کنید.\n" +
-        "برای تنظیم توکن، روی دکمه «تنظیم توکن» کلیک کنید.",
-      {
-        parse_mode: "HTML",
-        reply_markup: undefined,
-      },
-    );
+    const messageId = ctx.callbackQuery?.message?.message_id;
+    if (messageId) {
+      await ctx.editMessageText(
+        "⚠️ <b>توکن Azure DevOps تنظیم نشده است.</b>\n\n" +
+          "لطفاً ابتدا توکن خود را تنظیم کنید.\n" +
+          "برای تنظیم توکن، روی دکمه «تنظیم توکن» کلیک کنید.",
+        {
+          parse_mode: "HTML",
+          reply_markup: undefined,
+        },
+      );
+      await trackMessage(
+        ctx.api,
+        ctx.chat!.id.toString(),
+        messageId,
+        MessageType.DAILY_REPORT,
+        user.id,
+      );
+    }
     return;
   }
 
@@ -50,6 +61,9 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
   const decryptedToken = decryptToken(user.patToken);
 
   try {
+    // Get message ID for tracking
+    const messageId = ctx.callbackQuery?.message?.message_id;
+
     // Show loading message in group
     await ctx.editMessageText("⏳ در حال دریافت گزارش...", {
       reply_markup: undefined,
@@ -116,16 +130,35 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
     });
 
     // Update the group message to indicate report was sent
-    await ctx.editMessageText(
-      "✅ <b>گزارش روزانه به پیام خصوصی شما ارسال شد.</b>",
-      { parse_mode: "HTML", reply_markup: undefined },
-    );
+    if (messageId) {
+      await ctx.editMessageText(
+        "✅ <b>گزارش روزانه به پیام خصوصی شما ارسال شد.</b>",
+        { parse_mode: "HTML", reply_markup: undefined },
+      );
+      await trackMessage(
+        ctx.api,
+        ctx.chat!.id.toString(),
+        messageId,
+        MessageType.DAILY_REPORT,
+        user.id,
+      );
+    }
   } catch (error) {
     console.error("Azure DevOps error:", error);
-    await ctx.editMessageText(
-      "❌ <b>خطا در دریافت گزارش</b>\n\n" +
-        "لطفاً توکن خود را بررسی کنید یا دوباره تلاش کنید.",
-      { parse_mode: "HTML", reply_markup: undefined },
-    );
+    const messageId = ctx.callbackQuery?.message?.message_id;
+    if (messageId) {
+      await ctx.editMessageText(
+        "❌ <b>خطا در دریافت گزارش</b>\n\n" +
+          "لطفاً توکن خود را بررسی کنید یا دوباره تلاش کنید.",
+        { parse_mode: "HTML", reply_markup: undefined },
+      );
+      await trackMessage(
+        ctx.api,
+        ctx.chat!.id.toString(),
+        messageId,
+        MessageType.DAILY_REPORT,
+        user.id,
+      );
+    }
   }
 }

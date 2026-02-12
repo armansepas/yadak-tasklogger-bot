@@ -30,6 +30,8 @@ import {
 } from "../../../utils/date";
 import { startPatTokenFlow } from "../user/setPatTokenHandler";
 import { handleDailyReport as processDailyReport } from "../reports/dailyReportHandler";
+import { MessageType, trackMessage } from "../../../services/messageService";
+import { findMessagesByChatIdAndType } from "../../../db/queries/message";
 
 /**
  * Setup group command handlers
@@ -69,6 +71,20 @@ async function handleStartCommand(ctx: Context): Promise<void> {
     ctx.api.deleteMessage(ctx.chat!.id, ctx.message.message_id).catch(() => {});
   }
 
+  // Clean up any old welcome messages in this chat
+  const chatId = ctx.chat!.id.toString();
+  const oldMessages = await findMessagesByChatIdAndType(
+    chatId,
+    MessageType.WELCOME,
+  );
+  for (const msg of oldMessages) {
+    try {
+      await ctx.api.deleteMessage(chatId, msg.messageId);
+    } catch (e) {
+      // Ignore if already deleted
+    }
+  }
+
   const welcomeMessage = `
 👋 <b>خوش آمدید!</b>
 
@@ -76,10 +92,18 @@ async function handleStartCommand(ctx: Context): Promise<void> {
 `;
 
   // Send main keyboard
-  await ctx.reply(welcomeMessage, {
+  const sentMessage = await ctx.reply(welcomeMessage, {
     parse_mode: "HTML",
     reply_markup: buildMainKeyboard(),
   });
+
+  // Track the welcome message
+  await trackMessage(
+    ctx.api,
+    chatId,
+    sentMessage.message_id,
+    MessageType.WELCOME,
+  );
 }
 
 /**
@@ -123,10 +147,23 @@ async function handleStartWork(ctx: Context): Promise<void> {
 🏢 <b>محل کار را انتخاب کنید:</b>
 `;
 
+  // Get message to edit from callback query
+  const messageId = ctx.callbackQuery?.message?.message_id;
+  if (!messageId) return;
+
+  // Edit message with location keyboard
   await ctx.editMessageText(locationMessage, {
     parse_mode: "HTML",
     reply_markup: buildLocationKeyboard(),
   });
+
+  // Track location selection message
+  await trackMessage(
+    ctx.api,
+    ctx.chat!.id.toString(),
+    messageId,
+    MessageType.LOCATION_SELECT,
+  );
 }
 
 /**
@@ -138,6 +175,13 @@ async function handleFinishWork(ctx: Context): Promise<void> {
 
   if (!userId || !chatId) {
     await ctx.reply("❌ خطا در پردازش درخواست");
+    return;
+  }
+
+  // Get message to edit from callback query
+  const messageId = ctx.callbackQuery?.message?.message_id;
+  if (!messageId) {
+    await ctx.reply("❌ خطا در پردازش پیام");
     return;
   }
 
@@ -171,11 +215,20 @@ async function handleFinishWork(ctx: Context): Promise<void> {
 📆 ${formatPersianWeekday(now)}
 `;
 
-  // Send message to group
+  // Edit message
   await ctx.editMessageText(message, {
     parse_mode: "HTML",
     reply_markup: undefined,
   });
+
+  // Track finish work message
+  await trackMessage(
+    ctx.api,
+    chatId,
+    messageId,
+    MessageType.FINISH_WORK,
+    user.id,
+  );
 }
 
 /**
@@ -190,6 +243,13 @@ async function handleLocationSelection(
 
   if (!userId || !chatId) {
     await ctx.reply("❌ خطا در پردازش درخواست");
+    return;
+  }
+
+  // Get message to edit from callback query
+  const messageId = ctx.callbackQuery?.message?.message_id;
+  if (!messageId) {
+    await ctx.reply("❌ خطا در پردازش پیام");
     return;
   }
 
@@ -226,11 +286,20 @@ async function handleLocationSelection(
 📍 ${locationText}
 `;
 
-  // Send message to group
+  // Edit message
   await ctx.editMessageText(message, {
     parse_mode: "HTML",
     reply_markup: undefined,
   });
+
+  // Track start work message
+  await trackMessage(
+    ctx.api,
+    chatId,
+    messageId,
+    MessageType.START_WORK,
+    user.id,
+  );
 }
 
 /**

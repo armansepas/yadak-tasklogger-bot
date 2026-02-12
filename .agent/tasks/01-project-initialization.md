@@ -32,9 +32,9 @@ Initialize the project by setting up Bun, Drizzle, Git, and understanding the ex
 
 ## Checklist
 
-- [ ] Bun.js verified and available
-- [ ] Git repository initialized
-- [ ] package.json read and dependencies understood
-- [ ] README.md read
-- [ ] Dependencies installed with `bun install`
-- [ ] Project structure identified
+- [x] Bun.js verified and available
+- [x] Git repository initialized
+- [x] package.json read and dependencies understood
+- [x] README.md read
+- [x] Dependencies installed with `bun install`
+- [x] Project structure identified

@@ -24,7 +24,7 @@ Implement bot message tracking for cleanup and delete actions.
 
 ## Checklist
 
-- [ ] Bot messages tracked in database
-- [ ] Previous messages cleaned up
-- [ ] Latest message preserved
-- [ ] Workflow working correctly
+- [x] Bot messages tracked in database
+- [x] Previous messages cleaned up
+- [x] Latest message preserved
+- [x] Workflow working correctly
