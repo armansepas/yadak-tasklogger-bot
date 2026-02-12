@@ -36,8 +36,8 @@ Finish Work message:
 
 ## Checklist
 
-- [ ] Persian date utility working
-- [ ] Start Work message formatted correctly
-- [ ] Finish Work message formatted correctly
-- [ ] Work sessions stored in database
-- [ ] Command messages cleaned up
+- [x] Persian date utility working
+- [x] Start Work message formatted correctly
+- [x] Finish Work message formatted correctly
+- [x] Work sessions stored in database
+- [x] Command messages cleaned up
