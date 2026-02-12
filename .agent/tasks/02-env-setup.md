@@ -25,7 +25,7 @@ Set up the required environment variables in .env file for the bot to function.
 
 ## Checklist
 
-- [ ] .env file created
-- [ ] BOT_TOKEN configured
-- [ ] BOT_ADMIN_TELEGRAM_ID configured
+- [x] .env file created
+- [x] BOT_TOKEN configured
+- [x] BOT_ADMIN_TELEGRAM_ID configured
 - [ ] PROXY_URL configured (if needed)

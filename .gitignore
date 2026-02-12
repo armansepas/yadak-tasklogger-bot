@@ -25,3 +25,10 @@ data.db
 
 # Drizzle
 drizzle/
+
+
+
+.env
+
+# Database
+*.db
