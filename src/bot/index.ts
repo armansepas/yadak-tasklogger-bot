@@ -10,6 +10,7 @@ import "dotenv/config";
 import { setupDiscoveryHandlers } from "./handlers/discovery";
 import { setupAdminHandlers } from "./handlers/admin";
 import { setupGroupHandlers } from "./handlers/groups/startCommand";
+import { setupPatTokenHandlers } from "./handlers/user/setPatTokenHandler";
 
 // Import middleware
 import { accessControl, adminOnly } from "./middleware";
@@ -51,6 +52,7 @@ if (PROXY_URL) {
 setupDiscoveryHandlers();
 setupAdminHandlers();
 setupGroupHandlers();
+setupPatTokenHandlers();
 
 // Apply middleware
 bot.use(accessControl);

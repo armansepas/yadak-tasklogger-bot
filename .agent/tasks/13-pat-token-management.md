@@ -27,8 +27,8 @@ Implement PAT token storage and retrieval for Azure DevOps authentication per us
 
 ## Checklist
 
-- [ ] Token encryption utility working
-- [ ] "Set PAT Token" button working
-- [ ] Private message prompt for token
-- [ ] Token stored encrypted in database
-- [ ] Token retrievable for queries
+- [x] Token encryption utility working
+- [x] "Set PAT Token" button working
+- [x] Private message prompt for token
+- [x] Token stored encrypted in database
+- [x] Token retrievable for queries
