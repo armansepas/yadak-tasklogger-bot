@@ -1,0 +1,24 @@
+{
+  "name": "yadak-tasklog-bot",
+  "version": "1.0.0",
+  "description": "Internal Telegram bot for task logging and work tracking",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir ./dist",
+    "start": "bun run src/index.ts",
+    "db:generate": "bunx drizzle-kit generate:sqlite",
+    "db:push": "bunx drizzle-kit push:sqlite"
+  },
+  "dependencies": {
+    "grammy": "^1.20.0",
+    "drizzle-orm": "^0.29.0",
+    "better-sqlite3": "^9.0.0",
+    "dotenv": "^16.3.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "drizzle-kit": "^0.20.0",
+    "typescript": "^5.3.0"
+  }
+}
