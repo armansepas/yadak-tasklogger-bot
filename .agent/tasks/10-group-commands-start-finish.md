@@ -30,8 +30,8 @@ Implement /start command and inline keyboard with Start Work, Finish Work, Daily
 
 ## Checklist
 
-- [ ] /start command working in groups
-- [ ] Inline keyboard displayed with 4 buttons
-- [ ] Start Work shows office/remote selection
-- [ ] Finish Work records session
-- [ ] Work sessions stored in database
+- [x] /start command working in groups
+- [x] Inline keyboard displayed with 4 buttons
+- [x] Start Work shows office/remote selection
+- [x] Finish Work records session
+- [x] Work sessions stored in database

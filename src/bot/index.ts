@@ -9,6 +9,10 @@ import "dotenv/config";
 // Import handlers
 import { setupDiscoveryHandlers } from "./handlers/discovery";
 import { setupAdminHandlers } from "./handlers/admin";
+import { setupGroupHandlers } from "./handlers/groups/startCommand";
+
+// Import middleware
+import { accessControl, adminOnly } from "./middleware";
 
 // Get configuration from environment
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -46,6 +50,10 @@ if (PROXY_URL) {
 // Setup handlers
 setupDiscoveryHandlers();
 setupAdminHandlers();
+setupGroupHandlers();
+
+// Apply middleware
+bot.use(accessControl);
 
 // Error handling - use the bot's catch method
 bot.catch((err) => {

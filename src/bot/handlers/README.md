@@ -17,6 +17,12 @@ This folder contains handler modules for different bot functionalities.
   - /removegroup <groupId> - Delete group record
   - /removeuser <userId> - Delete user record
   - /discover - Extract group ID from forwarded message
+- `groups/` - Group-specific command handlers
+  - `/start` command in groups with inline keyboard
+  - Start Work button with office/remote selection
+  - Finish Work button
+  - Daily Report button (placeholder)
+  - Set PAT Token button
 
 ## Setup
 
@@ -25,8 +31,10 @@ Import and call the setup functions in the main bot entry point:
 ```typescript
 import { setupDiscoveryHandlers } from "./handlers/discovery";
 import { setupAdminHandlers } from "./handlers/admin";
+import { setupGroupHandlers } from "./handlers/groups/startCommand";
 
 // In main setup
 setupDiscoveryHandlers();
 setupAdminHandlers();
+setupGroupHandlers();
 ```
