@@ -27,9 +27,9 @@ Create the modular folder structure for the project following the simplicity and
 
 ## Checklist
 
-- [ ] /src/app/ folder created
-- [ ] /src/app/bot/ folder created with README.md
-- [ ] /src/app/db/ folder created with README.md
-- [ ] /src/app/scheduler/ folder created with README.md
-- [ ] /src/app/services/ folder created with README.md
-- [ ] /src/app/utils/ folder created with README.md
+- [x] /src/ folder exists with proper structure
+- [x] /src/bot/ folder created with README.md
+- [x] /src/db/ folder created with README.md
+- [x] /src/scheduler/ folder created with README.md
+- [x] /src/services/ folder created with README.md
+- [x] /src/utils/ folder created with README.md
