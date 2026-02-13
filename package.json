@@ -12,10 +12,11 @@
     "db:push": "bunx drizzle-kit push:sqlite"
   },
   "dependencies": {
-    "grammy": "^1.20.0",
     "@libsql/client": "^0.5.0",
+    "date-fns-jalali": "^4.1.0-0",
+    "dotenv": "^16.3.0",
     "drizzle-orm": "^0.29.0",
-    "dotenv": "^16.3.0"
+    "grammy": "^1.20.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
