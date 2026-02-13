@@ -13,8 +13,7 @@ const AZURE_DEVOPS_API_VERSION = "1.2";
  * Get authorization header with PAT token
  */
 function getAuthHeader(patToken: string): string {
-  const credentials = Buffer.from(`:${patToken}`).toString("base64");
-  return `Basic ${credentials}`;
+  return `Basic ${patToken}`;
 }
 
 /**
@@ -24,17 +23,16 @@ export async function runWiqlQuery(
   patToken: string,
   query: string,
 ): Promise<Array<{ id: number; url: string }>> {
-  const response = await fetch(
-    `${AZURE_DEVOPS_BASE_URL}/_apis/wit/wiql?api-version=${AZURE_DEVOPS_API_VERSION}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: getAuthHeader(patToken),
-      },
-      body: JSON.stringify({ query }),
+  const url = `${AZURE_DEVOPS_BASE_URL}/_apis/wit/wiql?api-version=${AZURE_DEVOPS_API_VERSION}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: getAuthHeader(patToken),
     },
-  );
+    body: JSON.stringify({ query }),
+  });
 
   if (!response.ok) {
     const errorText = await response.text();

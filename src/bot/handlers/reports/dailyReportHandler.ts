@@ -1,10 +1,9 @@
 /**
  * Daily Report Handler
- * Handles Daily Report button - queries Azure DevOps and sends report to user's private chat
+ * Handles Daily Report button - queries Azure DevOps and sends report to the same chat
  */
 
 import { Context } from "grammy";
-import { bot } from "../../index";
 import { findUserByTelegramId } from "../../../db/queries";
 import { getDailyWorkItems } from "../../../services/azure-devops";
 import { formatPersianDate } from "../../../utils/date";
@@ -12,12 +11,13 @@ import { decryptToken } from "../../../utils/crypto";
 import { MessageType, trackMessage } from "../../../services/messageService";
 
 /**
- * Handle Daily Report action - sends report to user's private chat
+ * Handle Daily Report action - sends report to the same chat where button was clicked
  */
 export async function handleDailyReport(ctx: Context): Promise<void> {
   const userId = ctx.from?.id.toString();
+  const chatId = ctx.chat?.id.toString();
 
-  if (!userId) {
+  if (!userId || !chatId) {
     await ctx.reply("❌ خطا در پردازش درخواست");
     return;
   }
@@ -48,7 +48,7 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
       );
       await trackMessage(
         ctx.api,
-        ctx.chat!.id.toString(),
+        chatId,
         messageId,
         MessageType.DAILY_REPORT,
         user.id,
@@ -123,25 +123,16 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
       }
     }
 
-    // Send report to user's private chat
-    const privateChatId = ctx.from!.id;
-    await bot.api.sendMessage(privateChatId, message, {
-      parse_mode: "HTML",
-    });
+    // Send report to the same chat (group) where button was clicked
+    await ctx.reply(message, { parse_mode: "HTML" });
 
-    // Update the group message to indicate report was sent
+    // Delete the original button message
     if (messageId) {
-      await ctx.editMessageText(
-        "✅ <b>گزارش روزانه به پیام خصوصی شما ارسال شد.</b>",
-        { parse_mode: "HTML", reply_markup: undefined },
-      );
-      await trackMessage(
-        ctx.api,
-        ctx.chat!.id.toString(),
-        messageId,
-        MessageType.DAILY_REPORT,
-        user.id,
-      );
+      try {
+        await ctx.api.deleteMessage(chatId, messageId);
+      } catch {
+        // Message might already be deleted or not accessible
+      }
     }
   } catch (error) {
     console.error("Azure DevOps error:", error);
@@ -154,7 +145,7 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
       );
       await trackMessage(
         ctx.api,
-        ctx.chat!.id.toString(),
+        chatId,
         messageId,
         MessageType.DAILY_REPORT,
         user.id,
