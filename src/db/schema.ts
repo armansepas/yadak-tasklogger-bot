@@ -1,14 +1,5 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
-// Status enum type
-export const StatusEnum = {
-  PENDING: "pending",
-  ALLOWED: "allowed",
-  REJECTED: "rejected",
-} as const;
-
-export type Status = (typeof StatusEnum)[keyof typeof StatusEnum];
-
 // Work session type enum
 export const WorkTypeEnum = {
   START: "start",
@@ -35,20 +26,13 @@ export const JobStatusEnum = {
 
 export type JobStatus = (typeof JobStatusEnum)[keyof typeof JobStatusEnum];
 
-// ManagedUser table - only users are managed, all groups are valid
+// User table - stores Telegram user info and PAT token for Azure DevOps
 export const managedUser = sqliteTable("managed_user", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   telegramId: text("telegram_id").notNull().unique(),
   name: text("name").notNull(),
   username: text("username"),
-  status: text("status", {
-    enum: [StatusEnum.PENDING, StatusEnum.ALLOWED, StatusEnum.REJECTED],
-  })
-    .notNull()
-    .default(StatusEnum.PENDING),
   patToken: text("pat_token"),
-  adminMessageId: integer("admin_message_id"),
-  adminChatId: text("admin_chat_id"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

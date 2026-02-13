@@ -296,4 +296,4 @@ everythin should be functional , no OOP is allowed . no base class nothing.
 
 do not build the project , i will run and test it myself .
 
-run type check and lint after each task is completed .
+run type check after each task is completed .

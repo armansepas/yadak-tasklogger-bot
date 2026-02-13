@@ -14,7 +14,6 @@ import {
   WorkTypeEnum,
   WorkLocationEnum,
   type WorkLocation,
-  StatusEnum,
 } from "../../../db/schema";
 import {
   buildMainKeyboard,
@@ -64,20 +63,32 @@ export function setupGroupHandlers(): void {
  * Handle /start command in groups
  */
 async function handleStartCommand(ctx: Context): Promise<void> {
-  // Handle private chat differently - show admin commands info
+  // Handle private chat differently - show PAT token options
   if (ctx.chat?.type === "private") {
-    const adminMessage = `
+    const userId = ctx.from?.id.toString();
+    const userName = ctx.from?.first_name || "کاربر";
+
+    // Ensure user exists in database
+    let user = await findUserByTelegramId(userId!);
+    if (!user) {
+      await createUser({
+        telegramId: userId!,
+        name: userName,
+        username: ctx.from?.username,
+      });
+      user = await findUserByTelegramId(userId!);
+    }
+
+    const privateMessage = `
 👋 <b>خوش آمدید!</b>
 
-🛠️ <b>پنل مدیریت</b>
-
-📋 <b>دستورات مدیریتی:</b>
-/admin - پنل مدیریت
-/users - لیست کاربران
-
-💡 برای شروع کار در گروه، از ربات در گروه استفاده کنید.
+از دکمه‌های زیر استفاده کنید:
 `;
-    await ctx.reply(adminMessage, { parse_mode: "HTML" });
+
+    await ctx.reply(privateMessage, {
+      parse_mode: "HTML",
+      reply_markup: buildMainKeyboard(),
+    });
     return;
   }
 
@@ -127,8 +138,16 @@ async function handleCallbackQuery(ctx: Context): Promise<void> {
   // Answer the callback to stop loading animation
   await ctx.answerCallbackQuery();
 
-  // Don't handle callback queries in private chat - they are for groups only
+  // Handle PAT token in private chat
   if (ctx.chat?.type === "private") {
+    if (callbackData === CallbackData.SET_PAT_TOKEN) {
+      await handleSetPatToken(ctx);
+    }
+    return;
+  }
+
+  // For groups, check if it's a group
+  if (ctx.chat?.type !== "group" && ctx.chat?.type !== "supergroup") {
     await ctx.reply("❌ این دستور فقط در گروه‌ها قابل استفاده است");
     return;
   }
@@ -215,20 +234,14 @@ async function handleFinishWork(ctx: Context): Promise<void> {
     return;
   }
 
-  // Ensure user exists in database (auto-create with ALLOWED status)
+  // Ensure user exists in database
   let user = await findUserByTelegramId(userId);
   if (!user) {
     await createUser({
       telegramId: userId,
       name: userName,
       username: username,
-      status: StatusEnum.ALLOWED,
     });
-    user = await findUserByTelegramId(userId);
-  } else if (user.status !== StatusEnum.ALLOWED) {
-    // Update user status to allowed if not already
-    const { updateUserByTelegramId } = await import("../../../db/queries");
-    await updateUserByTelegramId(userId, { status: StatusEnum.ALLOWED });
     user = await findUserByTelegramId(userId);
   }
 
@@ -239,6 +252,8 @@ async function handleFinishWork(ctx: Context): Promise<void> {
 
   // Create work session - use default group ID (1) since groups are not stored
   const now = new Date();
+
+  // Create work session
   await createWorkSession({
     userId: user.id,
     groupId: 1, // Default group - groups are not stored
@@ -304,20 +319,14 @@ async function handleLocationSelection(
     return;
   }
 
-  // Ensure user exists in database (auto-create with ALLOWED status)
+  // Ensure user exists in database
   let user = await findUserByTelegramId(userId);
   if (!user) {
     await createUser({
       telegramId: userId,
       name: userName,
       username: username,
-      status: StatusEnum.ALLOWED,
     });
-    user = await findUserByTelegramId(userId);
-  } else if (user.status !== StatusEnum.ALLOWED) {
-    // Update user status to allowed if not already
-    const { updateUserByTelegramId } = await import("../../../db/queries");
-    await updateUserByTelegramId(userId, { status: StatusEnum.ALLOWED });
     user = await findUserByTelegramId(userId);
   }
 
@@ -381,6 +390,13 @@ async function handleSetPatToken(ctx: Context): Promise<void> {
   const user = await findUserByTelegramId(telegramId);
 
   if (!user) {
+    // For private chat
+    if (ctx.chat?.type === "private") {
+      await ctx.reply("❌ <b>کاربر یافت نشد.</b>", { parse_mode: "HTML" });
+      return;
+    }
+
+    // For groups
     await ctx.editMessageText(
       "❌ <b>کاربر یافت نشد.</b>\n\nابتدا در یک گروه مجاز /start را بزنید.",
       { parse_mode: "HTML", reply_markup: undefined },
@@ -391,12 +407,14 @@ async function handleSetPatToken(ctx: Context): Promise<void> {
   // Start the PAT token flow in private chat
   await startPatTokenFlow(ctx);
 
-  // Update the group message
-  await ctx.editMessageText(
-    "🔐 <b>توکن Azure DevOps</b>\n\n" +
-      "لطفاً توکن خود را در پیام خصوصی ارسال شده وارد کنید.",
-    { parse_mode: "HTML", reply_markup: undefined },
-  );
+  // For groups, update the group message
+  if (ctx.chat?.type !== "private") {
+    await ctx.editMessageText(
+      "🔐 <b>توکن Azure DevOps</b>\n\n" +
+        "لطفاً توکن خود را در پیام خصوصی ارسال شده وارد کنید.",
+      { parse_mode: "HTML", reply_markup: undefined },
+    );
+  }
 }
 
 // Text button handlers (for Keyboard buttons)
@@ -429,6 +447,11 @@ async function handleDailyReportText(ctx: Context): Promise<void> {
 }
 
 async function handleSetPatTokenText(ctx: Context): Promise<void> {
+  // For private chat, handle directly
+  if (ctx.chat?.type === "private") {
+    await handleSetPatToken(ctx);
+    return;
+  }
   await handleSetPatToken(ctx);
 }
 
