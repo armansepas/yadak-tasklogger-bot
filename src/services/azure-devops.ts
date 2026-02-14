@@ -107,8 +107,7 @@ export async function getDailyWorkItems(
     FROM workitems 
     WHERE [System.TeamProject] = "Yadak.com" 
       AND [System.AssignedTo] = @me 
-      AND [System.ChangedDate] >= @today - 1 
-      AND [System.ChangedDate] < @today + 1 
+      AND [System.ChangedDate] >= @StartOfDay
     ORDER BY [System.ChangedDate] DESC
   `;
 
