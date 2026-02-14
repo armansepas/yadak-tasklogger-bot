@@ -5,7 +5,10 @@
 
 import { Context } from "grammy";
 import { findUserByTelegramId } from "../../../db/queries";
-import { getDailyWorkItems } from "../../../services/azure-devops";
+import {
+  getDailyWorkItems,
+  getCurrentUser,
+} from "../../../services/azure-devops";
 import { formatPersianDate } from "../../../utils/date";
 import { decryptToken } from "../../../utils/crypto";
 import { MessageType, trackMessage } from "../../../services/messageService";
@@ -97,6 +100,52 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
     // Fetch daily work items
     const workItems = (await getDailyWorkItems(decryptedToken)) as WorkItem[];
 
+    // Get current user to compare with ChangedBy
+    const currentUser = await getCurrentUser(decryptedToken);
+    const currentUserDisplayName = currentUser?.displayName || ""; // Format: Arman Abdi
+    console.log("[DailyReport] Current user:", currentUser);
+
+    // Helper to get first 2 words from a name
+    const getFirstTwoWords = (name: string): string => {
+      const words = name.trim().split(/\s+/);
+      return words.slice(0, 2).join(" ").toLowerCase();
+    };
+
+    // Helper to extract ChangedBy from item (it's a string in format "Name <domain\account>")
+    const getChangedBy = (item: WorkItem): string => {
+      const fields = item.fields || (item as Record<string, unknown>);
+      const changedBy = fields["System.ChangedBy"] as string;
+      return changedBy || "";
+    };
+
+    // Helper to check if item was changed by current user
+    const isChangedByMe = (item: WorkItem) => {
+      const changedBy = getChangedBy(item);
+      if (!changedBy || !currentUserDisplayName) {
+        console.log("[DailyReport] Missing changedBy or displayName");
+        return false;
+      }
+
+      // Extract the name part from "Name <domain\account>"
+      const changedByName = changedBy.split(" <")[0].trim(); // Gets "Nika Jabbari" or "Arman Abdi"
+
+      console.log("[DailyReport] Comparing:", {
+        changedByName,
+        changedByFirstTwo: getFirstTwoWords(changedByName),
+        currentUserDisplayName,
+        userFirstTwo: getFirstTwoWords(currentUserDisplayName),
+        match:
+          getFirstTwoWords(changedByName) ===
+          getFirstTwoWords(currentUserDisplayName),
+      });
+
+      // Compare first 2 words
+      const changedByFirstTwo = getFirstTwoWords(changedByName);
+      const userFirstTwo = getFirstTwoWords(currentUserDisplayName);
+
+      return changedByFirstTwo === userFirstTwo;
+    };
+
     // Format the response with Persian date header
     const today = formatPersianDate();
     let message = `📊 گزارش روزانه | ${today}\n\n`;
@@ -104,6 +153,10 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
     if (workItems.length === 0) {
       message += "📭 تسکی برای امروز یافت نشد.";
     } else {
+      // Group work items by who changed them (By Me vs By Others)
+      const changedByMe = workItems.filter((item) => isChangedByMe(item));
+      const changedByOthers = workItems.filter((item) => !isChangedByMe(item));
+
       // Helper to get work item type from item
       const getWorkItemType = (item: WorkItem) => {
         const fields = item.fields || (item as Record<string, unknown>);
@@ -124,13 +177,14 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
       const isNew = (state: string) =>
         state === "New" || state === "To Do" || state === "Open";
 
-      // Group work items by type (User Story vs Task)
-      const stories = workItems.filter(
-        (item) => getWorkItemType(item) === "User Story",
-      );
-      const tasks = workItems.filter(
-        (item) => getWorkItemType(item) === "Task",
-      );
+      // Group by type within each ChangedBy group
+      const groupByType = (items: WorkItem[]) => ({
+        stories: items.filter((item) => getWorkItemType(item) === "User Story"),
+        tasks: items.filter((item) => getWorkItemType(item) === "Task"),
+      });
+
+      const myItems = groupByType(changedByMe);
+      const othersItems = groupByType(changedByOthers);
 
       // Sort each group: Active > New > Resolved > Closed
       const getSortOrder = (state: string) => {
@@ -147,8 +201,11 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
         return getSortOrder(stateA) - getSortOrder(stateB);
       };
 
-      const sortedStories = [...stories].sort(sortByState);
-      const sortedTasks = [...tasks].sort(sortByState);
+      // Sort items
+      const sortedMyStories = [...myItems.stories].sort(sortByState);
+      const sortedMyTasks = [...myItems.tasks].sort(sortByState);
+      const sortedOthersStories = [...othersItems.stories].sort(sortByState);
+      const sortedOthersTasks = [...othersItems.tasks].sort(sortByState);
 
       // Helper to format a single item
       const formatItem = (item: WorkItem) => {
@@ -172,25 +229,37 @@ export async function handleDailyReport(ctx: Context): Promise<void> {
         return `${stateMark} <a href="https://vcontrol.sepasholding.com/Yagadotcom/_workitems/edit/${id}">#${id}</a> ${title}${hoursText}`;
       };
 
-      // Add stories section
-      if (sortedStories.length > 0) {
-        message += `استوری‌ها (${sortedStories.length}):\n`;
-        for (const item of sortedStories) {
-          message += formatItem(item) + "\n";
+      // Helper to add a section
+      const addSection = (
+        title: string,
+        stories: WorkItem[],
+        tasks: WorkItem[],
+      ) => {
+        if (stories.length === 0 && tasks.length === 0) return;
+        message += `📋 ${title}\n`;
+        if (stories.length > 0) {
+          message += `📖 استوری‌ها (${stories.length}):\n`;
+          for (const item of stories) {
+            message += formatItem(item) + "\n";
+          }
+        }
+        if (tasks.length > 0) {
+          message += `📝 تسک‌ها (${tasks.length}):\n`;
+          for (const item of tasks) {
+            message += formatItem(item) + "\n";
+          }
         }
         message += "\n";
-      }
+      };
 
-      // Add tasks section
-      if (sortedTasks.length > 0) {
-        message += `تسک‌ها (${sortedTasks.length}):\n`;
-        for (const item of sortedTasks) {
-          message += formatItem(item) + "\n";
-        }
-      }
+      // Add "By Me" section
+      addSection("تغییرات من", sortedMyStories, sortedMyTasks);
+
+      // Add "By Others" section
+      addSection("تغییرات تیم محصول", sortedOthersStories, sortedOthersTasks);
 
       // Add legend
-      message += "\n🔵 Active | ⚪ New | 🟢 Resolved | ✅ Closed";
+      message += "🔵 Active | ⚪ New | 🟢 Resolved | ✅ Closed";
     }
 
     // Handle differently for private chat vs group

@@ -21,6 +21,46 @@ function getAuthHeader(patToken: string): string {
 }
 
 /**
+ * Get current user profile from Azure DevOps
+ */
+export async function getCurrentUser(patToken: string): Promise<{
+  displayName: string;
+  uniqueName: string;
+  accountName: string;
+  mailAddress: string;
+} | null> {
+  try {
+    const response = await fetch(
+      `${AZURE_DEVOPS_BASE_URL}/_apis/ConnectionData?api-version=1.0`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: getAuthHeader(patToken),
+        },
+      },
+    );
+
+    if (!response.ok) {
+      console.error("[AzureDevOps] ConnectionData failed:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const authUser = data.authenticatedUser || {};
+
+    return {
+      displayName: authUser.providerDisplayName || "", // e.g., "Arman Abdi"
+      uniqueName: "", // Not available in this endpoint
+      accountName: authUser.properties?.Account?.$value || "", // e.g., "a.abdi"
+      mailAddress: "",
+    };
+  } catch (error) {
+    console.error("[AzureDevOps] ConnectionData error:", error);
+    return null;
+  }
+}
+
+/**
  * Run a WiQL query and return work item references
  */
 export async function runWiqlQuery(
@@ -95,7 +135,7 @@ export async function getDailyWorkItems(
   patToken: string,
 ): Promise<Array<Record<string, unknown>>> {
   const query = `
-    SELECT [System.Id], [System.Title], [System.State], [System.AssignedTo], [System.ChangedDate] 
+    SELECT [System.Id], [System.Title], [System.State], [System.AssignedTo], [System.ChangedDate], [System.ChangedBy] 
     FROM workitems 
     WHERE [System.TeamProject] = "Yadak.com" 
       AND [System.AssignedTo] = @me 
@@ -113,6 +153,7 @@ export async function getDailyWorkItems(
     "System.State",
     "System.WorkItemType",
     "System.AssignedTo",
+    "System.ChangedBy",
     "System.ChangedDate",
     "Microsoft.VSTS.Scheduling.OriginalEstimate",
     "Microsoft.VSTS.Scheduling.CompletedWork",
